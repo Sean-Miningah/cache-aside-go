@@ -1,15 +1,16 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 
+	"cache-api/controller"
 	"cache-api/repo"
 	"cache-api/store"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 const Port = 8080
@@ -50,46 +51,15 @@ func main() {
 		userStore.SeedUserStore("./test-data/users.json")
 	}
 
-	// Simple Handler function for '/ping' endpoint
-	pingHandler := func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Pong!")
-	}
+	userservice := controller.NewUserController(userStore)
 
-	cacheHandler := func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.Background()
-
-		err := repos.Cache.Set(ctx, "foo", "bar", 0).Err()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Create a map to hold the key-value pair
-		result := map[string]string{
-			"key": "foo",
-			// "value": val,
-		}
-
-		// Convert the map to JSON
-		jsonResult, err := json.Marshal(result)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Set the Content-Type header to indicate JSON response
-		w.Header().Set("Content-Type", "application/json")
-
-		// Write the JSON respo
-		w.Write(jsonResult)
-	}
-
-	http.HandleFunc("/ping", pingHandler)
-	http.HandleFunc("/cache", cacheHandler)
+	router := httprouter.New()
+	router.GET("/ping", userservice.PingHandler)
+	router.GET("/users", userservice.GetUsers)
 
 	// Start the HTTP server on the specified port
 	fmt.Printf("Server listening on :%d \n", Port)
-	err = http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", Port), router)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
