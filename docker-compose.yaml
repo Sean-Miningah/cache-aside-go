@@ -20,19 +20,23 @@ services:
       - REDIS_PASSWORD=my-password 
       - REDIS_PORT=6379
       - REDIS_DATABASES=0
+    depends_on:
+      - web-server
   
-  main-db: 
-      container_name: postgres-db
-      image: postgres:alpine 
-      restart: always 
-      ports: 
-        - '5432:5432' 
-      environment:
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: postgres
-        POSTGRES_DB: postgres
-      volumes: 
-        - pgdata:/var/lib/postgresql/data 
+  # main-db: 
+  #     container_name: postgres-db
+  #     image: postgres:alpine 
+  #     restart: always 
+  #     ports: 
+  #       - '5432:5432' 
+  #     environment:
+  #       POSTGRES_USER: postgres
+  #       POSTGRES_PASSWORD: postgres
+  #       POSTGRES_DB: postgres
+  #     depends_on: 
+  #       - web-server
+  #     volumes: 
+  #       - pgdata:/var/lib/postgresql/data 
 
 volumes:
   pgdata:

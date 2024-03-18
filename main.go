@@ -1,31 +1,53 @@
 package main
 
 import (
-	store "cache-api/data"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
+
+	"cache-api/repo"
+	"cache-api/store"
 )
 
 const Port = 8080
 
 func main() {
-	config := store.Config{
-		DBHost:        "main-db",
+	var (
+		migrate bool
+		seed    bool
+	)
+
+	flag.BoolVar(&migrate, "migrate", false, "run database migration")
+	flag.BoolVar(&seed, "seed", false, "seed database with appropriate data")
+	flag.Parse()
+
+	config := repo.Config{
+		DBHost:        "localhost",
 		DBPort:        "5432",
 		DBUser:        "postgres",
-		DBName:        "postgres",
+		DBName:        "redis-cache-project",
 		DBPassword:    "postgres",
-		CacheHost:     "web-server-cache",
+		CacheHost:     "localhost",
 		CacheUser:     "default",
 		CachePassword: "my-password",
 	}
 
-	store, err := store.NewStore(config)
+	repos, err := repo.NewRepos(config)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if migrate {
+		repos.MakeMigrations()
+	}
+
+	userStore := store.NewUserStoreRepo(repos)
+
+	if seed {
+		userStore.SeedUserStore("./test-data/users.json")
 	}
 
 	// Simple Handler function for '/ping' endpoint
@@ -36,7 +58,7 @@ func main() {
 	cacheHandler := func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Background()
 
-		err := store.Cache.Set(ctx, "foo", "bar", 0).Err()
+		err := repos.Cache.Set(ctx, "foo", "bar", 0).Err()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

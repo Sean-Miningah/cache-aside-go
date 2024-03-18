@@ -1,13 +1,14 @@
-package store
+package repo
 
 import (
 	"fmt"
 	"log"
 
-	"database/sql"
+	"cache-api/models"
 
-	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type Config struct {
@@ -21,27 +22,22 @@ type Config struct {
 	CachePassword string
 }
 
-type Store struct {
+type Repos struct {
 	Cache *redis.Client
-	DB    *sql.DB
+	DB    *gorm.DB
 }
 
-func NewStore(cfg Config) (*Store, error) {
+func NewRepos(cfg Config) (*Repos, error) {
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+	dsn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable TimeZone=Africa/Nairobi",
 		cfg.DBHost,
 		cfg.DBPort,
 		cfg.DBUser,
 		cfg.DBName,
 		cfg.DBPassword,
 	)
-	sqlDB, err := sql.Open("postgres", dsn)
-	if err != nil {
-		log.Fatalf("db connection failure: %v", err)
-	}
-
-	// test db connection
-	err = sqlDB.Ping()
+	// sqlDB, err := sql.Open("postgres", dsn)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("db connection failure: %v", err)
 	}
@@ -55,8 +51,16 @@ func NewStore(cfg Config) (*Store, error) {
 
 	cache := redis.NewClient(opt)
 
-	return &Store{
+	return &Repos{
 		Cache: cache,
-		DB:    sqlDB,
+		DB:    db,
 	}, nil
+}
+
+func (repos Repos) MakeMigrations() error {
+	repos.DB.AutoMigrate(
+		&models.User{},
+	)
+	log.Printf("Migration Complete !!")
+	return nil
 }
