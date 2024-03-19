@@ -98,6 +98,7 @@ func (data *UserStoreRepo) ListUsers() ([]models.User, error) {
 	// Store fetched users in the cache for future requests
 	err = data.repos.Cache.Set(ctx, "users", usersJSON, 24*time.Hour).Err() // Set appropriate expiration time
 	if err != nil {
+		log.Print("Failed to Update users key")
 		return users, err
 	}
 
